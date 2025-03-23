@@ -1,4 +1,13 @@
-删除群组中以 #GentooZh 开头的消息，bot 运行命令:
+删除群组中以 #GentooZh 开头的消息
+
+编译:
+
+```
+$ CGO_ENABLED=0 go build -o bot
+$ strip ./bot
+```
+
+运行:
 
 ```
 $ tgbot_token="xxxx" ./bot
