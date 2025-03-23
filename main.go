@@ -18,8 +18,8 @@ func main() {
 		log.Panic(err)
 	}
 
-	bot.Debug = false // 启用调试模式
-	log.Printf("Authorized on account %s", bot.Self.UserName)
+	bot.Debug = false
+	log.Printf("Bot started: @%s", bot.Self.UserName)
 
 	u := tgbotapi.NewUpdate(0)
 	u.Timeout = 60
@@ -27,28 +27,49 @@ func main() {
 	updates := bot.GetUpdatesChan(u)
 
 	for update := range updates {
-		if update.Message == nil {
-			continue // 忽略非消息更新
+		if update.Message == nil || update.Message.Text == "" {
+			continue // 忽略非文本消息
 		}
 
-		// 检查消息是否以 #GentooZh 开头
-		if strings.HasPrefix(update.Message.Text, "#GentooZh") {
+		// 转换为小写进行统一比较
+		lowerText := strings.ToLower(update.Message.Text)
+		if strings.HasPrefix(lowerText, "#gentoozh") {
 			// 构建删除请求
 			deleteConfig := tgbotapi.DeleteMessageConfig{
 				ChatID:    update.Message.Chat.ID,
 				MessageID: update.Message.MessageID,
 			}
 
-			// 执行删除操作
-			_, err := bot.Request(deleteConfig)
-			if err != nil {
-				log.Printf("删除消息失败: %v", err)
-				// 可选：发送错误提示给群组
-				// msg := tgbotapi.NewMessage(update.Message.Chat.ID, "删除消息失败: "+err.Error())
-				// bot.Send(msg)
+			// 执行删除并添加日志
+			if _, err := bot.Request(deleteConfig); err != nil {
+				log.Printf("删除失败 [%d]: %v", update.Message.MessageID, err)
+
+				// 可选：发送错误提示
+				// warnMsg := tgbotapi.NewMessage(
+				//	 update.Message.Chat.ID,
+				//	 "⚠️ 删除失败: "+err.Error(),
+				// )
+				// bot.Send(warnMsg)
 			} else {
-				log.Printf("已删除消息 ID %d", update.Message.MessageID)
+				log.Printf("已删除消息 [%d]: %s",
+					update.Message.MessageID,
+					truncateText(update.Message.Text, 20), // 截断长文本
+				)
+				// 可选：发送删除提示
+				deleteMsg := tgbotapi.NewMessage(
+					update.Message.Chat.ID, "tag 已删除",
+				)
+				bot.Send(deleteMsg)
+
 			}
 		}
 	}
+}
+
+// 辅助函数：截断过长的消息文本
+func truncateText(s string, maxLen int) string {
+	if len(s) <= maxLen {
+		return s
+	}
+	return s[:maxLen] + "..."
 }
